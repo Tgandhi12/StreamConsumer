@@ -1,0 +1,111 @@
+asyncapi: '3.0.0'
+info:
+  title: Oracle GoldenGate CDC Stream Consumer API
+  version: '1.0.0'
+  description: |
+    AsyncAPI contract for CDC events consumed from Oracle GoldenGate Data Stream Service over WebSocket.
+    The Java application subscribes to GoldenGate CDC events and processes INSERT, UPDATE, and DELETE operations.
+
+defaultContentType: application/json
+
+servers:
+  goldenGateDataStream:
+    host: 192.168.56.161:7803
+    pathname: /services/v2/stream/oggstream?begin=now
+    protocol: ws
+    description: Oracle GoldenGate Data Stream WebSocket endpoint.
+    security:
+      - $ref: '#/components/securitySchemes/basicAuth'
+
+channels:
+  goldenGateCdcStream:
+    address: /services/v2/stream/oggstream?begin=now
+    messages:
+      cdcEvent:
+        $ref: '#/components/messages/CdcEvent'
+    description: Stream of Oracle GoldenGate CDC events.
+
+operations:
+  receiveCdcEvent:
+    action: receive
+    channel:
+      $ref: '#/channels/goldenGateCdcStream'
+    summary: Receive CDC events from Oracle GoldenGate.
+    messages:
+      - $ref: '#/channels/goldenGateCdcStream/messages/cdcEvent'
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Basic authentication using Oracle GoldenGate user credentials.
+
+  messages:
+    CdcEvent:
+      name: CdcEvent
+      title: Oracle GoldenGate CDC Event
+      summary: CDC event generated for INSERT, UPDATE, and DELETE database operations.
+      payload:
+        $ref: '#/components/schemas/CdcEventPayload'
+      examples:
+        - name: insertExample
+          summary: INSERT event example
+          payload:
+            table: TEST.T1
+            op_type: INSERT
+            before: null
+            after:
+              NAME: ABC
+              NUM: 123
+        - name: updateExample
+          summary: UPDATE event example
+          payload:
+            table: TEST.T1
+            op_type: UPDATE
+            before:
+              NAME: ABC
+              NUM: 123
+            after:
+              NAME: ABC
+              NUM: 456
+        - name: deleteExample
+          summary: DELETE event example
+          payload:
+            table: TEST.T1
+            op_type: DELETE
+            before:
+              NAME: ABC
+              NUM: 456
+            after: null
+
+  schemas:
+    CdcEventPayload:
+      type: object
+      additionalProperties: true
+      required:
+        - op_type
+      properties:
+        table:
+          type: string
+          description: Source table name from GoldenGate event metadata.
+          example: TEST.T1
+        op_type:
+          type: string
+          enum:
+            - INSERT
+            - UPDATE
+            - DELETE
+          description: Type of DML operation.
+        before:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+          description: Row state before the change. Usually present for UPDATE and DELETE.
+        after:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+          description: Row state after the change. Usually present for INSERT and UPDATE.
