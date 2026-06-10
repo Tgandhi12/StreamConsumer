@@ -2,6 +2,7 @@ package com.example.stream.websocket;
 
 import com.example.stream.parser.CdcEventParser;
 import com.example.stream.service.EventProcessor;
+import com.example.stream.validation.AsyncApiValidator;
 import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.handshake.ServerHandshake;
 import org.slf4j.Logger;
@@ -15,6 +16,8 @@ public class GoldenGateWebSocketClient extends WebSocketClient {
 
     private final CdcEventParser parser;
     private final EventProcessor processor;
+    private final AsyncApiValidator validator =
+            new AsyncApiValidator();
 
     public GoldenGateWebSocketClient(URI serverUri,
                                      Map<String, String> headers,
@@ -32,7 +35,17 @@ public class GoldenGateWebSocketClient extends WebSocketClient {
 
     @Override
     public void onMessage(String message) {
-        parser.parse(message).forEach(processor::process);
+
+        if (!validator.validate(message)) {
+
+            log.error(
+                    "AsyncAPI validation failed. Message rejected.");
+
+            return;
+        }
+
+        parser.parse(message)
+                .forEach(processor::process);
     }
 
     @Override

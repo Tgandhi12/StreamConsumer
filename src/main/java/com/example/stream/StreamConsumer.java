@@ -14,7 +14,7 @@ public class StreamConsumer {
     public static void main(String[] args) throws Exception {
 
         String username = "oggadmin";
-        String password = "Tanishq@2004";
+        String password = "Password";
 
         String url = "ws://192.168.56.161:7803/services/v2/stream/oggstream?begin=now";
 

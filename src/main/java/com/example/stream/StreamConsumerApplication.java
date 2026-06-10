@@ -7,7 +7,8 @@ import com.example.stream.websocket.GoldenGateStreamRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class StreamConsumerApplication {
+public class
+StreamConsumerApplication {
     private static final Logger log = LoggerFactory.getLogger(StreamConsumerApplication.class);
 
     public static void main(String[] args) throws InterruptedException {
