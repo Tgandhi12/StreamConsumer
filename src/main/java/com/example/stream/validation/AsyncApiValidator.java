@@ -5,14 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
-import java.util.Map;
+import java.util.*;
 
 public class AsyncApiValidator {
 
     private final ObjectMapper mapper =
             new ObjectMapper();
 
-    private final Map<String, Object> asyncApiSpec;
+    private final Set<String> requiredFields =
+            new HashSet<>();
+
+    private final Set<String> allowedOperations =
+            new HashSet<>();
 
     public AsyncApiValidator() {
 
@@ -26,9 +30,7 @@ public class AsyncApiValidator {
                         "asyncapi.yaml not found");
             }
 
-            Yaml yaml = new Yaml();
-
-            asyncApiSpec = yaml.load(input);
+            loadSchema(input);
 
             System.out.println(
                     "AsyncAPI Loaded Successfully");
@@ -41,6 +43,49 @@ public class AsyncApiValidator {
         }
     }
 
+    @SuppressWarnings("unchecked")
+    private void loadSchema(InputStream input) {
+
+        Yaml yaml = new Yaml();
+
+        Map<String, Object> root =
+                yaml.load(input);
+
+        Map<String, Object> components =
+                (Map<String, Object>) root.get("components");
+
+        Map<String, Object> schemas =
+                (Map<String, Object>) components.get("schemas");
+
+        Map<String, Object> payload =
+                (Map<String, Object>)
+                        schemas.get("CdcEventPayload");
+
+        List<String> required =
+                (List<String>)
+                        payload.get("required");
+
+        if (required != null) {
+            requiredFields.addAll(required);
+        }
+
+        Map<String, Object> properties =
+                (Map<String, Object>)
+                        payload.get("properties");
+
+        Map<String, Object> opType =
+                (Map<String, Object>)
+                        properties.get("op_type");
+
+        List<String> enums =
+                (List<String>)
+                        opType.get("enum");
+
+        if (enums != null) {
+            allowedOperations.addAll(enums);
+        }
+    }
+
     public boolean validate(String message) {
 
         try {
@@ -48,20 +93,32 @@ public class AsyncApiValidator {
             JsonNode node =
                     mapper.readTree(message);
 
-            if (!node.has("table")) {
+            for (String field : requiredFields) {
 
-                System.out.println(
-                        "Validation Failed: table missing");
+                if (!node.has(field)) {
 
-                return false;
+                    System.out.println(
+                            "Validation Failed: Missing field "
+                                    + field);
+
+                    return false;
+                }
             }
 
-            if (!node.has("op_type")) {
+            if (node.has("op_type")) {
 
-                System.out.println(
-                        "Validation Failed: op_type missing");
+                String operation =
+                        node.get("op_type")
+                                .asText();
 
-                return false;
+                if (!allowedOperations.contains(operation)) {
+
+                    System.out.println(
+                            "Validation Failed: Invalid operation "
+                                    + operation);
+
+                    return false;
+                }
             }
 
             return true;
