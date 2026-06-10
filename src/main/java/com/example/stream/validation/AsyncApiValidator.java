@@ -2,12 +2,18 @@ package com.example.stream.validation;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
 import java.util.*;
 
 public class AsyncApiValidator {
+
+    private static final Logger log =
+            LoggerFactory.getLogger(
+                    AsyncApiValidator.class);
 
     private final ObjectMapper mapper =
             new ObjectMapper();
@@ -26,14 +32,15 @@ public class AsyncApiValidator {
                              .getResourceAsStream("asyncapi.yaml")) {
 
             if (input == null) {
+
                 throw new RuntimeException(
                         "asyncapi.yaml not found");
             }
 
             loadSchema(input);
 
-            System.out.println(
-                    "AsyncAPI Loaded Successfully");
+            log.info(
+                    "AsyncAPI loaded successfully");
 
         } catch (Exception e) {
 
@@ -52,37 +59,94 @@ public class AsyncApiValidator {
                 yaml.load(input);
 
         Map<String, Object> components =
-                (Map<String, Object>) root.get("components");
+                (Map<String, Object>)
+                        root.get("components");
+
+        /*
+         * Resolve:
+         *
+         * components
+         *   -> messages
+         *      -> CdcEvent
+         *          -> payload
+         *              -> $ref
+         */
+
+        Map<String, Object> messages =
+                (Map<String, Object>)
+                        components.get("messages");
+
+        Map<String, Object> cdcEvent =
+                (Map<String, Object>)
+                        messages.get("CdcEvent");
+
+        Map<String, Object> payloadRef =
+                (Map<String, Object>)
+                        cdcEvent.get("payload");
+
+        String ref =
+                payloadRef.get("$ref")
+                        .toString();
+
+        String schemaName =
+                ref.substring(
+                        ref.lastIndexOf("/") + 1);
+
+        log.info(
+                "Resolved schema: {}",
+                schemaName);
 
         Map<String, Object> schemas =
-                (Map<String, Object>) components.get("schemas");
+                (Map<String, Object>)
+                        components.get("schemas");
 
         Map<String, Object> payload =
                 (Map<String, Object>)
-                        schemas.get("CdcEventPayload");
+                        schemas.get(schemaName);
+
+        if (payload == null) {
+
+            throw new RuntimeException(
+                    "Schema not found: "
+                            + schemaName);
+        }
 
         List<String> required =
                 (List<String>)
                         payload.get("required");
 
         if (required != null) {
+
             requiredFields.addAll(required);
+
+            log.info(
+                    "Required fields: {}",
+                    requiredFields);
         }
 
         Map<String, Object> properties =
                 (Map<String, Object>)
                         payload.get("properties");
 
-        Map<String, Object> opType =
-                (Map<String, Object>)
-                        properties.get("op_type");
+        if (properties != null
+                && properties.containsKey("op_type")) {
 
-        List<String> enums =
-                (List<String>)
-                        opType.get("enum");
+            Map<String, Object> opType =
+                    (Map<String, Object>)
+                            properties.get("op_type");
 
-        if (enums != null) {
-            allowedOperations.addAll(enums);
+            List<String> enums =
+                    (List<String>)
+                            opType.get("enum");
+
+            if (enums != null) {
+
+                allowedOperations.addAll(enums);
+
+                log.info(
+                        "Allowed operations: {}",
+                        allowedOperations);
+            }
         }
     }
 
@@ -97,9 +161,9 @@ public class AsyncApiValidator {
 
                 if (!node.has(field)) {
 
-                    System.out.println(
-                            "Validation Failed: Missing field "
-                                    + field);
+                    log.warn(
+                            "Validation failed. Missing required field: {}",
+                            field);
 
                     return false;
                 }
@@ -111,11 +175,12 @@ public class AsyncApiValidator {
                         node.get("op_type")
                                 .asText();
 
-                if (!allowedOperations.contains(operation)) {
+                if (!allowedOperations.isEmpty()
+                        && !allowedOperations.contains(operation)) {
 
-                    System.out.println(
-                            "Validation Failed: Invalid operation "
-                                    + operation);
+                    log.warn(
+                            "Validation failed. Invalid operation: {}",
+                            operation);
 
                     return false;
                 }
@@ -125,8 +190,9 @@ public class AsyncApiValidator {
 
         } catch (Exception e) {
 
-            System.out.println(
-                    "Invalid JSON");
+            log.error(
+                    "Invalid JSON payload",
+                    e);
 
             return false;
         }
