@@ -22,6 +22,29 @@ class AsyncApiValidatorTest {
         assertTrue(
                 validator.validate(event));
     }
+    @Test
+    void shouldRejectInvalidJson() {
+
+        String event = """
+            {
+              "table":"EMPLOYEE",
+            """;
+
+        assertFalse(
+                validator.validate(event));
+    }
+    @Test
+    void shouldAcceptEventWithoutTable() {
+
+        String event = """
+            {
+              "op_type":"INSERT"
+            }
+            """;
+
+        assertTrue(
+                validator.validate(event));
+    }
 
     @Test
     void shouldRejectMissingOpType() {

@@ -1,19 +1,31 @@
 package com.example.stream.service;
 
+import com.example.stream.checkpoint.CheckpointStore;
 import com.example.stream.model.CdcEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 public class EventProcessor {
-    private static final Logger log = LoggerFactory.getLogger(EventProcessor.class);
 
-    public void process(CdcEvent event) {
-        // Enterprise extension point:
-        // 1. Validate event schema
-        // 2. Publish to Kafka/RabbitMQ
-        // 3. Persist audit copy
-        // 4. Trigger downstream workflows
-        log.info("CDC Event received | table={} | operation={} | before={} | after={}",
-                event.table(), event.operationType(), event.before(), event.after());
+    private final List<EventHandler> handlers;
+
+    private final CheckpointStore checkpointStore =
+            new CheckpointStore();
+
+    public EventProcessor(
+            List<EventHandler> handlers) {
+
+        this.handlers = handlers;
+    }
+
+    public void process(
+            CdcEvent event) {
+
+        handlers.forEach(
+                handler ->
+                        handler.handle(event));
+
+        checkpointStore.save(
+                event.transactionId());
     }
 }

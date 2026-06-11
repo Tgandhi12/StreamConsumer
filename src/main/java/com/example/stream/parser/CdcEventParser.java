@@ -49,7 +49,30 @@ public class CdcEventParser {
         JsonNode before = node.path("before").isMissingNode() ? null : node.path("before");
         JsonNode after = node.path("after").isMissingNode() ? null : node.path("after");
 
-        return Optional.of(new CdcEvent(table, operationType.get(), before, after, node));
+        String txId =
+                findText(node,
+                        "txid",
+                        "transactionId");
+
+        String position =
+                findText(node,
+                        "position");
+
+        String timestamp =
+                findText(node,
+                        "timestamp",
+                        "commitTimestamp");
+
+        return Optional.of(
+                new CdcEvent(
+                        table,
+                        operationType.get(),
+                        txId,
+                        position,
+                        timestamp,
+                        before,
+                        after,
+                        node));
     }
 
     private String findText(JsonNode node, String... fieldNames) {

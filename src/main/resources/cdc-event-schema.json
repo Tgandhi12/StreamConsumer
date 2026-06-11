@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+
+  "type": "object",
+
+  "required": [
+    "op_type"
+  ],
+
+  "properties": {
+
+    "table": {
+      "type": "string"
+    },
+
+    "op_type": {
+      "type": "string",
+      "enum": [
+        "INSERT",
+        "UPDATE",
+        "DELETE"
+      ]
+    },
+
+    "before": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+
+    "after": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+
+    "txid": {
+      "type": "string"
+    },
+
+    "position": {
+      "type": "string"
+    },
+
+    "timestamp": {
+      "type": "string"
+    }
+  },
+
+  "additionalProperties": true
+}

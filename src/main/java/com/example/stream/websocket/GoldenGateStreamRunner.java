@@ -3,6 +3,7 @@ package com.example.stream.websocket;
 import com.example.stream.config.StreamConfig;
 import com.example.stream.parser.CdcEventParser;
 import com.example.stream.service.EventProcessor;
+import com.example.stream.checkpoint.CheckpointStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,6 +18,8 @@ public class GoldenGateStreamRunner {
 
     private final StreamConfig config;
     private final CdcEventParser parser;
+    private final CheckpointStore checkpointStore =
+            new CheckpointStore();
     private final EventProcessor processor;
 
     public GoldenGateStreamRunner(StreamConfig config, CdcEventParser parser, EventProcessor processor) {
@@ -26,6 +29,15 @@ public class GoldenGateStreamRunner {
     }
 
     public void start() throws InterruptedException {
+        String lastCheckpoint =
+                checkpointStore.load();
+
+        if (lastCheckpoint != null) {
+
+            log.info(
+                    "Recovered checkpoint: {}",
+                    lastCheckpoint);
+        }
         int attempt = 0;
         long delayMs = config.initialReconnectDelayMs();
 
